@@ -90,15 +90,13 @@ func main() {
 
 	router.Mount("/v1", v1Router)
 	srv := &http.Server{
-		Addr:    ":" + port,
-		Handler: router,
-		 ReadHeaderTimeout: 5 * time.Second,
-
-    // recommended hardening
-    ReadTimeout:       15 * time.Second,   // whole request (headers + body) read deadline
-    WriteTimeout:      30 * time.Second,   // response write deadline
-    IdleTimeout:       75 * time.Second,   // keep-alive connections
-    MaxHeaderBytes:    1 << 20,            // 1 MiB cap on headers
+		Addr:              ":" + port,
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       75 * time.Second,
+		MaxHeaderBytes:    1 << 20,
 	}
 
 	log.Printf("Serving on port: %s\n", port)
