@@ -14,9 +14,9 @@ func TestGetAPIKey(t *testing.T) {
 	type tc struct {
 		name          string
 		authValue     *string // nil => header absent
-		wantKey       string   // expected key on success
-		wantErrIsNoAH bool     // expect ErrNoAuthHeaderIncluded
-		wantErrMsg    string   // exact error message expected
+		wantKey       string  // expected key on success
+		wantErrIsNoAH bool    // expect ErrNoAuthHeaderIncluded
+		wantErrMsg    string  // exact error message expected
 	}
 
 	tests := []tc{
