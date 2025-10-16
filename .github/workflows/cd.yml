@@ -33,5 +33,10 @@ jobs:
       - name: staticcheck
         run: staticcheck ./...
 
-      - name: Run the script
-        run: scripts/buildprod.sh
+      - name: install staticcheck
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: staticcheck
+        run: staticcheck ./...
