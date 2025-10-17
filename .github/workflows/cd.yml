@@ -4,20 +4,10 @@ on:
   push:
     branches: [main]
 
-permissions:
-  contents: read # key-based auth doesn't need id-token
-
 jobs:
-  Deploy:
-    name: Deploy
+  Deploy: # job *id* is Deploy
+    name: Deploy # job display name is Deploy
     runs-on: ubuntu-latest
-    env:
-      PROJECT_ID: notely-475312
-      REGION: us-central1
-      REPO: notely-ar-repo
-      IMAGE: notely
-      TAG: ${{ github.sha }}
-
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -25,40 +15,31 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          # Prefer reading from go.mod; avoids hardcoding possibly invalid versions
-          go-version-file: go.mod
-          cache: true
+          go-version: "1.25.1" # or whatever version your project uses
 
       - name: Build the app
         run: |
           chmod +x scripts/buildprod.sh
           bash scripts/buildprod.sh
 
-      # 🔐 AUTH: use your JSON key stored in repo secret GCP_SA_KEY
-      - name: Validate secret
-        run: '[ -n "${{ secrets.private_key }}" ] || { echo "Missing private_key"; exit 1; }'
+  DockerImage:
+    name: DockerImage
+    # Add "id-token" with the intended permissions.
+    permissions:
+      contents: "read"
+      id-token: "write"
 
-      - name: Authenticate to Google Cloud (JSON key)
-        uses: google-github-actions/auth@v2
+    steps:
+      - id: "auth"
+        uses: "google-github-actions/auth@v2"
         with:
-          credentials_json: ${{ secrets.private_key }}
+          workload_identity_provider: "https://www.googleapis.com/robot/v1/metadata/x509/cloud-run-deployer%40notely-475312.iam.gserviceaccount.com"
+          service_account: "cloud-run-deployer@notely-475312.iam.gserviceaccount.com"
 
-      - name: Set up gcloud
-        uses: google-github-actions/setup-gcloud@v2
+      - name: "Set up Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v3"
         with:
-          project_id: ${{ env.PROJECT_ID }}
+          version: ">= 363.0.0"
 
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
-
-      - name: Build image
-        run: |
-          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}"
-          docker build -t "${IMAGE_URI}:${{ env.TAG }}" .
-          docker tag "${IMAGE_URI}:${{ env.TAG }}" "${IMAGE_URI}:latest"
-
-      - name: Push image
-        run: |
-          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}"
-          docker push "${IMAGE_URI}:${{ env.TAG }}"
-          docker push "${IMAGE_URI}:latest"
+      - name: "Use gcloud CLI"
+        run: "gcloud info"
