@@ -24,11 +24,11 @@ jobs:
 
   DockerImage:
     name: DockerImage
+    runs-on: ubuntu-latest
     # Add "id-token" with the intended permissions.
     permissions:
       contents: "read"
       id-token: "write"
-      runs-on: ubuntu-latest
 
     steps:
       - id: "auth"
