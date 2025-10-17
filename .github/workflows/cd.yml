@@ -21,3 +21,30 @@ jobs:
         run: |
           chmod +x scripts/buildprod.sh
           bash scripts/buildprod.sh
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker to use Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build Docker image
+        run: |
+          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}"
+          docker build -t "${IMAGE_URI}:${{ env.TAG }}" .
+          # also tag "latest" (optional)
+          docker tag "${IMAGE_URI}:${{ env.TAG }}" "${IMAGE_URI}:latest"
+
+      - name: Push Docker image
+        run: |
+          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}"
+          docker push "${IMAGE_URI}:${{ env.TAG }}"
+          docker push "${IMAGE_URI}:latest"
