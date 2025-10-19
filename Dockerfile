@@ -1,7 +1,14 @@
-FROM --platform=linux/amd64 debian:stable-slim
+# Stage 1: Build the Go binary
+FROM golang:1.21-alpine AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -v -o /app/notely .
 
-RUN apt-get update && apt-get install -y ca-certificates
-
-ADD notely /usr/bin/notely
-
-CMD ["notely"]
+# Stage 2: Create the final, lightweight image
+FROM alpine:latest
+WORKDIR /app
+COPY --from=builder /app/notely .
+EXPOSE 8080
+CMD ["./notely"]
