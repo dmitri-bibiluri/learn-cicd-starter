@@ -41,5 +41,5 @@ jobs:
         uses: "google-github-actions/deploy-cloudrun@v2"
         with:
           service: "your-service-name" # The name of your Cloud Run service
-          region: "your-region" # e.g., us-central1
+          region: "europe-west1" # e.g., us-central1
           source: "." # Deploy the code from the current directory
