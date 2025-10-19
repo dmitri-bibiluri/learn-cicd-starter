@@ -31,3 +31,4 @@ jobs:
         with:
           service: "notely" # Your service name
           region: "europe-west1" # Your region
+          source: "." # <-- Add this line
