@@ -21,24 +21,37 @@ jobs:
         run: |
           chmod +x scripts/buildprod.sh
           bash scripts/buildprod.sh
+       - name: Checkout repository
+        uses: actions/checkout@v4
 
-  DockerImage:
-    name: DockerImage
-    runs-on: ubuntu-latest
-    # Add "id-token" with the intended permissions.
-    permissions:
-      contents: "read"
-      id-token: "write"
-
-    steps:
-      - id: "auth"
-        uses: "google-github-actions/auth@v2"
+      - name: 'Authenticate to Google Cloud using Workload Identity Federation'
+        id: 'auth'
+        uses: 'google-github-actions/auth@v2'
         with:
-          workload_identity_provider: "https://www.googleapis.com/robot/v1/metadata/x509/cloud-run-deployer%40notely-475312.iam.gserviceaccount.com"
-          service_account: "cloud-run-deployer@notely-475312.iam.gserviceaccount.com"
+          # Your Google Cloud Project Number (from the dashboard: 1026851540891)
+          project_id: ${{ env.PROJECT_ID }}
+          # The Workload Identity Provider resource string:
+          # projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID
+          workload_identity_provider: 'projects/1026851540891/locations/global/workloadIdentityPools/githubactions/providers/OIDC'
+          # The email of the Service Account your CD will impersonate
+          service_account: '[cloud-run-deployer@notely-475312.iam.gserviceaccount.com]'
 
-      - name: "Set up Cloud SDK"
-        uses: "google-github-actions/setup-gcloud@v3"
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
 
-      - name: "Use gcloud CLI"
-        run: "gcloud info"
+      - name: 'Configure Docker to use gcloud as a credential helper'
+        run: gcloud auth configure-docker "${{ env.GCR_HOSTNAME }}"
+
+      - name: 'Build Docker image'
+        run: docker build -t "${{ env.GCR_HOSTNAME }}/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}" .
+
+      - name: 'Push Docker image to Google Container Registry'
+        run: docker push "${{ env.GCR_HOSTNAME }}/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+
+      - name: 'Deploy to Cloud Run'
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image "${{ env.GCR_HOSTNAME }}/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}" \
+            --region us-central1 # Specify your desired region
+            --platform managed \
+            --allow-unauthenticated # Or remove if you need authentication
