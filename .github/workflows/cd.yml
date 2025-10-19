@@ -13,7 +13,7 @@ jobs:
       id-token: "write"
 
     steps:
-      # 1. Check out the repository code (which includes your Dockerfile)
+      # 1. Check out the repository code
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -25,10 +25,14 @@ jobs:
           workload_identity_provider: "projects/1026851540891/locations/global/workloadIdentityPools/githubactions/providers/github"
           service_account: "cloud-run-deployer@notely-475312.iam.gserviceaccount.com"
 
-      # 3. Deploy to Cloud Run (this will automatically use your Dockerfile)
-      - name: "Deploy to Cloud Run"
-        uses: "google-github-actions/deploy-cloudrun@v2"
-        with:
-          service: "notely" # Your service name
-          region: "europe-west1" # Your region
-          source: "." # <-- Add this line
+      # 3. Build and push the image to Artifact Registry
+      - name: Build and Push Image
+        run: |-
+          gcloud builds submit --tag europe-west1-docker.pkg.dev/notely-475312/cloud-run-source-deploy/notely:${{ github.sha }} .
+
+      # 4. Deploy the new image to Cloud Run
+      - name: Deploy to Cloud Run
+        run: |-
+          gcloud run deploy notely \
+            --image europe-west1-docker.pkg.dev/notely-475312/cloud-run-source-deploy/notely:${{ github.sha }} \
+            --region europe-west1
