@@ -33,7 +33,7 @@ jobs:
         uses: "google-github-actions/auth@v2"
         with:
           # IMPORTANT: Replace this with your REAL project number
-          workload_identity_provider: "projects/1026851540891/locations/global/workloadIdentityPools/githubactions/providers/OIDC"
+          workload_identity_provider: "projects/1026851540891/locations/global/workloadIdentityPools/githubactions/providers/github"
           service_account: "cloud-run-deployer@notely-475312.iam.gserviceaccount.com"
 
       # 5. Deploy to Cloud Run (or your target service)
