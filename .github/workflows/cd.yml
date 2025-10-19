@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 jobs:
-  build-and-deploy: # A single job to handle everything
+  build-and-deploy:
     name: Build and Deploy
     runs-on: ubuntu-latest
     permissions:
@@ -13,33 +13,21 @@ jobs:
       id-token: "write"
 
     steps:
-      # 1. Check out the repository code
-      - name: Check out code
+      # 1. Check out the repository code (which includes your Dockerfile)
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Set up the Go environment
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.25.1"
-
-      # 3. Build the application
-      - name: Build the app
-        run: go build -v -o my-app # Standard Go build command
-
-      # 4. Authenticate to Google Cloud (with the CORRECT project number)
+      # 2. Authenticate to Google Cloud
       - id: "auth"
         name: "Authenticate to Google Cloud"
         uses: "google-github-actions/auth@v2"
         with:
-          # IMPORTANT: Replace this with your REAL project number
           workload_identity_provider: "projects/1026851540891/locations/global/workloadIdentityPools/githubactions/providers/github"
           service_account: "cloud-run-deployer@notely-475312.iam.gserviceaccount.com"
 
-      # 5. Deploy to Cloud Run (or your target service)
+      # 3. Deploy to Cloud Run (this will automatically use your Dockerfile)
       - name: "Deploy to Cloud Run"
         uses: "google-github-actions/deploy-cloudrun@v2"
         with:
-          service: "your-service-name" # The name of your Cloud Run service
-          region: "europe-west1" # e.g., us-central1
-          source: "." # Deploy the code from the current directory
+          service: "notely" # Your service name
+          region: "europe-west1" # Your region
