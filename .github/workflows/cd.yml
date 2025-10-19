@@ -1,46 +1,45 @@
-name: cd
+name: CI/CD Pipeline
 
 on:
   push:
     branches: [main]
 
 jobs:
-  Deploy: # job *id* is Deploy
-    name: Deploy # job display name is Deploy
+  build-and-deploy: # A single job to handle everything
+    name: Build and Deploy
     runs-on: ubuntu-latest
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.25.1" # or whatever version your project uses
-
-      - name: Build the app
-        run: |
-          chmod +x scripts/buildprod.sh
-          bash scripts/buildprod.sh
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-  Gcloud:
-    name: Gcloud
-    runs-on: ubuntu-latest
-    # Add "id-token" with the intended permissions.
     permissions:
       contents: "read"
       id-token: "write"
 
     steps:
+      # 1. Check out the repository code
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      # 2. Set up the Go environment
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.1"
+
+      # 3. Build the application
+      - name: Build the app
+        run: go build -v -o my-app # Standard Go build command
+
+      # 4. Authenticate to Google Cloud (with the CORRECT project number)
       - id: "auth"
+        name: "Authenticate to Google Cloud"
         uses: "google-github-actions/auth@v2"
         with:
-          workload_identity_provider: "projects/notely-475312/locations/global/workloadIdentityPools/githubactions/providers/OIDC"
+          # IMPORTANT: Replace this with your REAL project number
+          workload_identity_provider: "projects/1026851540891/locations/global/workloadIdentityPools/githubactions/providers/OIDC"
           service_account: "cloud-run-deployer@notely-475312.iam.gserviceaccount.com"
 
-      - name: "Set up Cloud SDK"
-        uses: "google-github-actions/setup-gcloud@v3"
-
-      - name: "Use gcloud CLI"
-        run: "gcloud info"
+      # 5. Deploy to Cloud Run (or your target service)
+      - name: "Deploy to Cloud Run"
+        uses: "google-github-actions/deploy-cloudrun@v2"
+        with:
+          service: "your-service-name" # The name of your Cloud Run service
+          region: "your-region" # e.g., us-central1
+          source: "." # Deploy the code from the current directory
