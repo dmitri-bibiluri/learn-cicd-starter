@@ -14,13 +14,12 @@ jobs:
       REGION: us-central1
       REPO: cloud-run-source-deploy
       SERVICE: notely
-      IMAGE: us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE }}:${{ github.sha }}
+      IMAGE: us-central1-docker.pkg.dev/notely-475312/cloud-run-source-deploy/notely:${{ github.sha }}
 
     steps:
       - name: Check out code
         uses: actions/checkout@v4
 
-      # Authenticate to GCP
       - id: auth
         uses: google-github-actions/auth@v2
         with:
@@ -29,21 +28,17 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      # (One-time safe) ensure the Artifact Registry repo exists
       - name: Ensure Artifact Registry repo
         run: |
           gcloud artifacts repositories create "$REPO" \
             --repository-format=docker --location="$REGION" || true
 
-      # Build + push image (Cloud Build builds on amd64)
       - name: Build and push image
         run: gcloud builds submit --tag "$IMAGE"
 
-      # Optional: list images to confirm the tag is there
       - name: List pushed images (debug)
         run: gcloud artifacts docker images list "$REGION-docker.pkg.dev/$PROJECT_ID/$REPO" --include-tags
 
-      # Deploy the EXACT same tag
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy "$SERVICE" \
