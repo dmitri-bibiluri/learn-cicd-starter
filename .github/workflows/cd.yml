@@ -9,18 +9,18 @@ jobs:
     name: Deploy
     runs-on: ubuntu-latest
 
+    env:
+      PROJECT_ID: notely-475312
+      REGION: us-central1
+      REPO: cloud-run-source-deploy
+      SERVICE: notely
+      IMAGE: us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE }}:${{ github.sha }}
+
     steps:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.25.1"
-
-      - name: Build app
-        run: ./scripts/buildprod.sh
-
+      # Authenticate to GCP
       - id: auth
         uses: google-github-actions/auth@v2
         with:
@@ -29,8 +29,26 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Use gcloud CLI
-        run: gcloud info
+      # (One-time safe) ensure the Artifact Registry repo exists
+      - name: Ensure Artifact Registry repo
+        run: |
+          gcloud artifacts repositories create "$REPO" \
+            --repository-format=docker --location="$REGION" || true
 
-      - name: Build and push Docker image
-        run: gcloud run deploy notely --image us-central1-docker.pkg.dev/notely-475312/cloud-run-source-deploy/notely:${{ github.sha }} --region us-central1 --allow-unauthenticated --project notely-475312 --max-instances=4
+      # Build + push image (Cloud Build builds on amd64)
+      - name: Build and push image
+        run: gcloud builds submit --tag "$IMAGE"
+
+      # Optional: list images to confirm the tag is there
+      - name: List pushed images (debug)
+        run: gcloud artifacts docker images list "$REGION-docker.pkg.dev/$PROJECT_ID/$REPO" --include-tags
+
+      # Deploy the EXACT same tag
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --image "$IMAGE" \
+            --region "$REGION" \
+            --allow-unauthenticated \
+            --project "$PROJECT_ID" \
+            --max-instances=4
